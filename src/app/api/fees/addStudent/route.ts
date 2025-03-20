@@ -1,9 +1,24 @@
 import connection from "@/lib/dbconnect";
 import { ExistingStudent } from "@/lib/type";
 import { FieldPacket, ResultSetHeader } from "mysql2";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/authOptions";
 
 export async function POST(req: Request) {
     try {
+        // Get token from request
+        const session = await getServerSession(authOptions);
+
+        if (!session || !session.user) {
+            return Response.json({ msg: 'Unauthorized' }, { status: 401 });
+        }
+
+        console.log("Session Data:", session);
+
+        // Extract admin ID from session
+        const adminId = session.user.id;
+        console.log("Admin ID:", adminId);
+
         const { StudentName, StudentClass, StudentSubject, StudentDoj, StudentFeesCycle, StudentFees, StudentIsDelist } = await req.json();
 
         if (!StudentName || !StudentClass || !StudentSubject || !StudentDoj || !StudentFeesCycle || !StudentFees || !StudentIsDelist) {
@@ -12,8 +27,8 @@ export async function POST(req: Request) {
 
         // Execute SELECT query and expect 'result' to contain an array of rows
         const [result]: [ExistingStudent[], FieldPacket[]] = await connection.execute(
-            'SELECT Studentid,StudentName,StudentClass FROM student WHERE StudentName=? AND StudentClass=?',
-            [StudentName, StudentClass]
+            'SELECT Studentid,StudentName,StudentClass FROM student WHERE StudentName=? AND StudentClass=? and adminId=?',
+            [StudentName, StudentClass, adminId]
         );
 
         if (result.length !== 0) {
@@ -27,7 +42,7 @@ export async function POST(req: Request) {
         const currentMonth = currentdate.getMonth()
         const currentYear = currentdate.getFullYear()
 
-        const [insertResult]: [ResultSetHeader, FieldPacket[]] = await connection.execute('INSERT INTO student (Studentid, StudentName, StudentClass, StudentSubject,StudentDoj,StudentFeesCycle,StudentFees,StudentIsDelist) VALUES (?,?,?,?,?,?,?,?)', [id, StudentName, StudentClass, StudentSubject, currentdate, StudentFeesCycle, StudentFees, StudentIsDelist])
+        const [insertResult]: [ResultSetHeader, FieldPacket[]] = await connection.execute('INSERT INTO student (Studentid, StudentName, StudentClass, StudentSubject,StudentDoj,StudentFeesCycle,StudentFees,StudentIsDelist,adminId) VALUES (?,?,?,?,?,?,?,?,?)', [id, StudentName, StudentClass, StudentSubject, currentdate, StudentFeesCycle, StudentFees, StudentIsDelist, adminId])
 
 
 
@@ -47,7 +62,8 @@ export async function POST(req: Request) {
                     month,
                     currentYear,
                     null,
-                    "No"
+                    "No",
+                    adminId
                 ]);
             }
         }
@@ -60,7 +76,8 @@ export async function POST(req: Request) {
                     month,
                     currentYear,
                     null,
-                    "No"
+                    "No",
+                    adminId
                 ]);
             }
             for (let month = 1; month <= 3; month++) {
@@ -71,7 +88,8 @@ export async function POST(req: Request) {
                     month,
                     currentYear + 1,
                     null,
-                    "No"
+                    "No",
+                    adminId
                 ]);
             }
 
@@ -79,7 +97,7 @@ export async function POST(req: Request) {
         }
 
         const bulkInsertQuery = `
-        INSERT INTO studentfees(id, Studentid, FeesPaid, month, year, payDate, payStatus) VALUES ?`;
+        INSERT INTO studentfees(id, Studentid, FeesPaid, month, year, payDate, payStatus,adminId) VALUES ?`;
 
         const result2: [ResultSetHeader, FieldPacket[]] = await connection.query(bulkInsertQuery, [studentFeesRecord]);
 

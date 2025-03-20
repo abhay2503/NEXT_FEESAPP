@@ -6,7 +6,7 @@ export async function middleware(req: NextRequest) {
     const path = req.nextUrl.pathname;
 
     // Define public routes that don't need authentication
-    const publicRoutes = ["/", "/NEWLOGO1.png"];
+    const publicRoutes = ["/", "/NEWLOGO1.png", "/Register"];
 
     // Allow access to public routes without authentication
     if (publicRoutes.includes(path)) {

@@ -1,9 +1,24 @@
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import connection from "@/lib/dbconnect";
 import { FieldPacket, ResultSetHeader } from "mysql2";
+import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 
 export async function PUT(req: NextRequest) {
     try {
+        // Get token from request
+        const session = await getServerSession(authOptions);
+
+        if (!session || !session.user) {
+            return Response.json({ msg: 'Unauthorized' }, { status: 401 });
+        }
+
+        console.log("Session Data:", session);
+
+        // Extract admin ID from session
+        const adminId = session.user.id;
+        console.log("Admin ID:", adminId);
+
         const id = req.nextUrl.pathname.split('/').pop();
 
         if (!id) {
@@ -12,8 +27,8 @@ export async function PUT(req: NextRequest) {
 
         // Execute UPDATE query
         const [result]: [ResultSetHeader, FieldPacket[]] = await connection.execute(
-            'UPDATE student SET StudentIsDelist = ? WHERE Studentid = ?',
-            ["No", id]
+            'UPDATE student SET StudentIsDelist = ? WHERE Studentid = ? and adminId=?',
+            ["No", id, adminId]
         );
 
         if (result.affectedRows === 0) {

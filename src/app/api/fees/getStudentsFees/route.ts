@@ -1,9 +1,23 @@
 import connection from "@/lib/dbconnect";
 import { Admin } from "@/lib/type";
 import { FieldPacket } from "mysql2";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/authOptions";
 
 export async function POST(req: Request) {
     try {
+
+        // Get token from request
+        const session = await getServerSession(authOptions);
+
+        if (!session || !session.user) {
+            return Response.json({ msg: 'Unauthorized' }, { status: 401 });
+        }
+
+        console.log("Session Data:", session);
+
+        // Extract admin ID from session
+        const adminId = session.user.id;
 
         const { month } = await req.json()
 
@@ -26,7 +40,7 @@ export async function POST(req: Request) {
           from studentfees
           LEFT JOIN student ON
           student.Studentid=studentfees.Studentid
-          WHERE studentfees.month=? and year=?`, [parseInt(month), year]);
+          WHERE studentfees.month=? and year=? AND student.adminid = ?`, [parseInt(month), year, adminId]);
 
         console.log(result);
         return Response.json({ msg: result }, { status: 201 })
